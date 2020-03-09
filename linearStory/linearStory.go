@@ -29,6 +29,11 @@ func (page *storyPage) addToEnd(text string) {
 	page.nextPage = pageToAdd
 }
 
+func (page *storyPage) addAfter(text string) {
+	newPage := &storyPage{text, page.nextPage}
+	page.nextPage = newPage
+}
+
 func main() {
 	//scanner := bufio.NewScanner(os.Stdin)
 	// much simpler
