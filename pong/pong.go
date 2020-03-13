@@ -30,7 +30,7 @@ type pos struct {
 
 type ball struct {
 	pos
-	radius int
+	radius float32
 	xv     float32
 	yv     float32
 	color  color
@@ -42,7 +42,7 @@ func (ball *ball) draw(pixels []byte) {
 		for x := -ball.radius; x < ball.radius; x++ {
 			// sqrt root is expensive
 			if x*x+y*y < ball.radius*ball.radius {
-				setPixel(int(ball.x)+x, int(ball.y)+y, ball.color, pixels)
+				setPixel(ball.x+x, ball.y+y, ball.color, pixels)
 			}
 		}
 	}
@@ -52,23 +52,23 @@ func (ball *ball) update(leftPaddle *paddle, rightPaddle *paddle) {
 	ball.x += ball.xv
 	ball.y += ball.yv
 	// handle collision
-	if int(ball.y)-ball.radius < 0 || int(ball.y)+ball.radius > winHeight {
+	if ball.y-ball.radius < 0 || ball.y+ball.radius > float32(winHeight) {
 		ball.yv = -ball.yv
 	}
-	if ball.x < 0 || int(ball.x) > winWidth {
+	if ball.x < 0 || ball.x > float32(winWidth) {
 		ball.x = 300
 		ball.y = 300
 	}
 
-	if int(ball.x)-int(ball.radius) < int(leftPaddle.x)+leftPaddle.w/2 {
-		if int(ball.y) > int(leftPaddle.y)-leftPaddle.h/2 &&
-			int(ball.y) < int(leftPaddle.y)+leftPaddle.h/2 {
+	if ball.x-ball.radius < leftPaddle.x+leftPaddle.w/2 {
+		if ball.y > leftPaddle.y-leftPaddle.h/2 &&
+			ball.y < leftPaddle.y+leftPaddle.h/2 {
 			ball.xv = -ball.xv
 		}
 	}
-	if int(ball.x)+int(ball.radius) > int(rightPaddle.x)-rightPaddle.w/2 {
-		if int(ball.y) > int(rightPaddle.y)-rightPaddle.h/2 &&
-			int(ball.y) < int(rightPaddle.y)+rightPaddle.h/2 {
+	if ball.x+ball.radius > rightPaddle.x-rightPaddle.w/2 {
+		if ball.y > rightPaddle.y-rightPaddle.h/2 &&
+			ball.y < rightPaddle.y+rightPaddle.h/2 {
 			ball.xv = -ball.xv
 		}
 	}
@@ -76,17 +76,17 @@ func (ball *ball) update(leftPaddle *paddle, rightPaddle *paddle) {
 
 type paddle struct {
 	pos
-	w     int
-	h     int
+	w     float32
+	h     float32
 	color color
 }
 
 func (paddle *paddle) draw(pixels []byte) {
-	startX := int(paddle.x) - paddle.w/2
-	startY := int(paddle.y) - paddle.h/2
+	startX := paddle.x - paddle.w/2
+	startY := paddle.y - paddle.h/2
 
-	for y := 0; y < paddle.h; y++ {
-		for x := 0; x < paddle.w; x++ {
+	for y := float32(0); y < paddle.h; y++ {
+		for x := float32(0); x < paddle.w; x++ {
 			setPixel(startX+x, startY+y, paddle.color, pixels)
 		}
 	}
@@ -112,8 +112,8 @@ func clear(pixels []byte) {
 	}
 }
 
-func setPixel(x, y int, c color, pixels []byte) {
-	index := (y*winWidth + x) * 4
+func setPixel(x, y float32, c color, pixels []byte) {
+	index := int(y)*winWidth + int(x)*4
 
 	if index < len(pixels)-4 && index >= 0 {
 		pixels[index] = c.r
