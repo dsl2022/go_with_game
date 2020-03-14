@@ -30,7 +30,7 @@ type pos struct {
 
 type ball struct {
 	pos
-	radius int
+	radius float32
 	xv     float32
 	yv     float32
 	color  color
@@ -42,33 +42,36 @@ func (ball *ball) draw(pixels []byte) {
 		for x := -ball.radius; x < ball.radius; x++ {
 			// sqrt root is expensive
 			if x*x+y*y < ball.radius*ball.radius {
-				setPixel(int(ball.x)+x, int(ball.y)+y, ball.color, pixels)
+				setPixel(int(ball.x+x), int(ball.y+y), ball.color, pixels)
 			}
 		}
 	}
 }
 
-func (ball *ball) update(leftPaddle *paddle, rightPaddle *paddle) {
-	ball.x += ball.xv
-	ball.y += ball.yv
+func getCenter() pos {
+	return pos{float32(winWidth) / 2, float32(winHeight) / 2}
+}
+
+func (ball *ball) update(leftPaddle *paddle, rightPaddle *paddle, elapsedTime float32) {
+	ball.x += ball.xv * elapsedTime
+	ball.y += ball.yv * elapsedTime
 	// handle collision
-	if int(ball.y)-ball.radius < 0 || int(ball.y)+ball.radius > winHeight {
+	if ball.y-ball.radius < 0 || ball.y+ball.radius > float32(winHeight) {
 		ball.yv = -ball.yv
 	}
 	if ball.x < 0 || int(ball.x) > winWidth {
-		ball.x = 300
-		ball.y = 300
+		ball.pos = getCenter()
 	}
 
-	if int(ball.x)-int(ball.radius) < int(leftPaddle.x)+leftPaddle.w/2 {
-		if int(ball.y) > int(leftPaddle.y)-leftPaddle.h/2 &&
-			int(ball.y) < int(leftPaddle.y)+leftPaddle.h/2 {
+	if ball.x-ball.radius < leftPaddle.x+leftPaddle.w/2 {
+		if ball.y > leftPaddle.y-leftPaddle.h/2 &&
+			ball.y < leftPaddle.y+leftPaddle.h/2 {
 			ball.xv = -ball.xv
 		}
 	}
-	if int(ball.x)+int(ball.radius) > int(rightPaddle.x)-rightPaddle.w/2 {
-		if int(ball.y) > int(rightPaddle.y)-rightPaddle.h/2 &&
-			int(ball.y) < int(rightPaddle.y)+rightPaddle.h/2 {
+	if ball.x+ball.radius > rightPaddle.x-rightPaddle.w/2 {
+		if ball.y > rightPaddle.y-rightPaddle.h/2 &&
+			ball.y < rightPaddle.y+rightPaddle.h/2 {
 			ball.xv = -ball.xv
 		}
 	}
@@ -76,33 +79,37 @@ func (ball *ball) update(leftPaddle *paddle, rightPaddle *paddle) {
 
 type paddle struct {
 	pos
-	w     int
-	h     int
+	w     float32
+	h     float32
+	speed float32
 	color color
 }
 
 func (paddle *paddle) draw(pixels []byte) {
-	startX := int(paddle.x) - paddle.w/2
-	startY := int(paddle.y) - paddle.h/2
+	startX := int(paddle.x - paddle.w/2)
+	startY := int(paddle.y - paddle.h/2)
 
-	for y := 0; y < paddle.h; y++ {
-		for x := 0; x < paddle.w; x++ {
+	for y := 0; y < int(paddle.h); y++ {
+		for x := 0; x < int(paddle.w); x++ {
 			setPixel(startX+x, startY+y, paddle.color, pixels)
 		}
 	}
 }
 
-func (paddle *paddle) update(keyState []uint8) {
+func (paddle *paddle) update(keyState []uint8, elapsedTime float32) {
+
 	if keyState[sdl.SCANCODE_UP] != 0 {
-		paddle.y -= 5
+		paddle.y -= paddle.speed * elapsedTime
+		fmt.Println(paddle.y)
 	}
 	if keyState[sdl.SCANCODE_DOWN] != 0 {
-		paddle.y += 5
+		paddle.y += paddle.speed * elapsedTime
+		fmt.Println(paddle.y)
 	}
 
 }
 
-func (paddle *paddle) aiUpdate(ball *ball) {
+func (paddle *paddle) aiUpdate(ball *ball, elapsedTime float32) {
 	paddle.y = ball.y
 }
 
@@ -163,13 +170,17 @@ func main() {
 	// 	}
 	// }
 
-	player1 := paddle{pos{50, 100}, 20, 100, color{255, 255, 255}}
-	player2 := paddle{pos{float32(winWidth) - 50, 100}, 20, 100, color{255, 255, 255}}
-	ball := ball{pos{300, 300}, 20, 3, 3, color{255, 255, 255}}
+	player1 := paddle{pos{50, 100}, 20, 100, 300, color{255, 255, 255}}
+	player2 := paddle{pos{float32(winWidth) - 50, 100}, 20, 100, 300, color{255, 255, 255}}
+	ball := ball{pos{300, 300}, 20, 400, 400, color{255, 255, 255}}
 
 	keyState := sdl.GetKeyboardState()
 
+	//var frameStart time.Time
+	var elapsedTime float32
 	for {
+		//		frameStart = time.Now()
+
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			// type switch
 			switch event.(type) {
@@ -179,9 +190,9 @@ func main() {
 
 		}
 		clear(pixels)
-		player1.update(keyState)
-		player2.aiUpdate(&ball)
-		ball.update(&player1, &player2)
+		player1.update(keyState, elapsedTime)
+		player2.aiUpdate(&ball, elapsedTime)
+		ball.update(&player1, &player2, elapsedTime)
 
 		player1.draw(pixels)
 		player2.draw(pixels)
@@ -190,7 +201,7 @@ func main() {
 		tex.Update(nil, pixels, winWidth*4)
 		renderer.Copy(tex, nil, nil)
 		renderer.Present()
-
+		//elapsedTime = float32(time.Since(frameStart).Seconds()) / 1000.0
 		sdl.Delay(16)
 	}
 
