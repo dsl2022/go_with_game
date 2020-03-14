@@ -21,37 +21,6 @@ import (
 
 const winWidth, winHeight int = 800, 600
 
-var nums = [][]byte{
-	{
-		1, 1, 1,
-		1, 0, 1,
-		1, 0, 1,
-		1, 0, 1,
-		1, 1, 1,
-	},
-	{
-		1, 1, 0,
-		1, 1, 0,
-		1, 1, 0,
-		1, 1, 0,
-		1, 1, 1,
-	},
-	{
-		1, 1, 1,
-		0, 0, 1,
-		1, 1, 1,
-		1, 0, 0,
-		1, 1, 1,
-	},
-	{
-		1, 1, 1,
-		0, 0, 1,
-		0, 1, 1,
-		0, 0, 1,
-		1, 1, 1,
-	},
-}
-
 type color struct {
 	r, g, b byte
 }
@@ -69,12 +38,43 @@ type ball struct {
 }
 
 func drawNumber(pos pos, color color, size int, num int, pixels []byte) {
+	nums := [][]byte{
+		{
+			1, 1, 1,
+			1, 0, 1,
+			1, 0, 1,
+			1, 0, 1,
+			1, 1, 1,
+		},
+		{
+			1, 1, 0,
+			1, 1, 0,
+			1, 1, 0,
+			1, 1, 0,
+			1, 1, 1,
+		},
+		{
+			1, 1, 1,
+			0, 0, 1,
+			1, 1, 1,
+			1, 0, 0,
+			1, 1, 1,
+		},
+		{
+			1, 1, 1,
+			0, 0, 1,
+			0, 1, 1,
+			0, 0, 1,
+			1, 1, 1,
+		},
+	}
+
 	startX := int(pos.x) - (size*3)/2
 	startY := int(pos.y) - (size*5)/2
 	for i, v := range nums[num] {
 		if v == 1 {
 			for y := startY; y < startY+size; y++ {
-				for x := startX; x < startX+x; x++ {
+				for x := startX; x < startX+size; x++ {
 					setPixel(x, y, color, pixels)
 				}
 			}
@@ -110,7 +110,11 @@ func (ball *ball) update(leftPaddle *paddle, rightPaddle *paddle, elapsedTime fl
 	if ball.y-ball.radius < 0 || ball.y+ball.radius > float32(winHeight) {
 		ball.yv = -ball.yv
 	}
-	if ball.x < 0 || int(ball.x) > winWidth {
+	if ball.x < 0 {
+		rightPaddle.score++
+		ball.pos = getCenter()
+	} else if int(ball.x) > winWidth {
+		leftPaddle.score++
 		ball.pos = getCenter()
 	}
 
@@ -133,7 +137,13 @@ type paddle struct {
 	w     float32
 	h     float32
 	speed float32
+	score int
 	color color
+}
+
+// linear interpolation
+func lerp(a float32, b float32, pct float32) float32 {
+	return a + pct*(b-a)
 }
 
 func (paddle *paddle) draw(pixels []byte) {
@@ -145,6 +155,8 @@ func (paddle *paddle) draw(pixels []byte) {
 			setPixel(startX+x, startY+y, paddle.color, pixels)
 		}
 	}
+	numX := lerp(paddle.x, getCenter().x, 0.2)
+	drawNumber(pos{numX, 35}, paddle.color, 10, paddle.score, pixels)
 }
 
 func (paddle *paddle) update(keyState []uint8, elapsedTime float32) {
@@ -221,9 +233,9 @@ func main() {
 	// 	}
 	// }
 
-	player1 := paddle{pos{50, 100}, 20, 100, 300, color{255, 255, 255}}
-	player2 := paddle{pos{float32(winWidth) - 50, 100}, 20, 100, 300, color{255, 255, 255}}
-	ball := ball{pos{300, 300}, 20, 400, 400, color{255, 255, 255}}
+	player1 := paddle{pos{50, 100}, 20, 100, 300, 0, color{255, 255, 255}}
+	player2 := paddle{pos{float32(winWidth) - 50, 100}, 20, 100, 300, 0, color{255, 255, 255}}
+	ball := ball{pos{300, 300}, 20, 200, 200, color{255, 255, 255}}
 
 	keyState := sdl.GetKeyboardState()
 
