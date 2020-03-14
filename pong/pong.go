@@ -14,6 +14,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -176,10 +177,10 @@ func main() {
 
 	keyState := sdl.GetKeyboardState()
 
-	//var frameStart time.Time
+	var frameStart time.Time
 	var elapsedTime float32
 	for {
-		//		frameStart = time.Now()
+		frameStart = time.Now()
 
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			// type switch
@@ -201,8 +202,12 @@ func main() {
 		tex.Update(nil, pixels, winWidth*4)
 		renderer.Copy(tex, nil, nil)
 		renderer.Present()
-		//elapsedTime = float32(time.Since(frameStart).Seconds()) / 1000.0
-		sdl.Delay(16)
+		elapsedTime = float32(time.Since(frameStart).Seconds())
+		fmt.Println(elapsedTime)
+		if elapsedTime < .005 {
+			sdl.Delay(uint32(5) - uint32(elapsedTime/1000.0))
+			elapsedTime = float32(time.Since(frameStart).Seconds())
+		}
 	}
 
 }
