@@ -21,6 +21,37 @@ import (
 
 const winWidth, winHeight int = 800, 600
 
+var nums = [][]byte{
+	{
+		1, 1, 1,
+		1, 0, 1,
+		1, 0, 1,
+		1, 0, 1,
+		1, 1, 1,
+	},
+	{
+		1, 1, 0,
+		1, 1, 0,
+		1, 1, 0,
+		1, 1, 0,
+		1, 1, 1,
+	},
+	{
+		1, 1, 1,
+		0, 0, 1,
+		1, 1, 1,
+		1, 0, 0,
+		1, 1, 1,
+	},
+	{
+		1, 1, 1,
+		0, 0, 1,
+		0, 1, 1,
+		0, 0, 1,
+		1, 1, 1,
+	},
+}
+
 type color struct {
 	r, g, b byte
 }
@@ -35,6 +66,25 @@ type ball struct {
 	xv     float32
 	yv     float32
 	color  color
+}
+
+func drawNumber(pos pos, color color, size int, num int, pixels []byte) {
+	startX := int(pos.x) - (size*3)/2
+	startY := int(pos.y) - (size*5)/2
+	for i, v := range nums[num] {
+		if v == 1 {
+			for y := startY; y < startY+size; y++ {
+				for x := startX; x < startX+x; x++ {
+					setPixel(x, y, color, pixels)
+				}
+			}
+		}
+		startX += size
+		if (i+1)%3 == 0 {
+			startY += size
+			startX -= size * 3
+		}
+	}
 }
 
 func (ball *ball) draw(pixels []byte) {
@@ -191,6 +241,7 @@ func main() {
 
 		}
 		clear(pixels)
+		drawNumber(getCenter(), color{255, 255, 255}, 20, 2, pixels)
 		player1.update(keyState, elapsedTime)
 		player2.aiUpdate(&ball, elapsedTime)
 		ball.update(&player1, &player2, elapsedTime)
