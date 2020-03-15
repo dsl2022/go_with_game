@@ -28,6 +28,19 @@ func getGradient(c1, c2 color) []color {
 	return result
 }
 
+func getDualGradient(c1, c2, c3, c4 color) []color {
+	result := make([]color, 256)
+	for i := range result {
+		pct := float32(i) / float32(255)
+		if pct < 0.5 {
+			result[i] = colorLerp(c1, c2, pct*float32(2))
+		} else {
+			result[i] = colorLerp(c3, c4, pct*float32(1.5)-float32(0.5))
+		}
+	}
+	return result
+}
+
 func clamp(min, max, v int) int {
 	if v < min {
 		v = min
@@ -55,6 +68,21 @@ func rescaleAndDraw(noise []float32, min, max float32, gradient []color, pixels 
 	}
 }
 
+func turbulence(x, y, frequency, lacunarity, gain float32, octaves int) float32 {
+	var sum float32
+	amplitude := float32(1)
+	for i := 0; i < octaves; i++ {
+		f := snoise2(x*frequency, y*frequency) * amplitude
+		if f < 0 {
+			f = -1.0 * f
+		}
+		sum += f
+		frequency *= lacunarity
+		amplitude *= gain
+	}
+	return sum
+}
+
 // lacunarity - the rate at which the frequency is changed in each iteration
 // gain - the rate at which the noise ampitude of noise through each itteration
 // octave - how many iteration we are going to have.
@@ -79,7 +107,7 @@ func makeNoise(pixels []byte, frequency, lacunarity, gain float32, octaves int) 
 		for x := 0; x < winWidth; x++ {
 			// fmt.Println(snoise2(float32(x), float32(y)))
 			// noise[i] = snoise2(float32(x)/100.0, float32(y)/100.0)
-			noise[i] = fbm2(float32(x), float32(y), frequency, lacunarity, gain, octaves)
+			noise[i] = turbulence(float32(x), float32(y), frequency, lacunarity, gain, octaves)
 			if noise[i] < min {
 				min = noise[i]
 			} else if noise[i] > max {
@@ -88,6 +116,8 @@ func makeNoise(pixels []byte, frequency, lacunarity, gain float32, octaves int) 
 			i++
 		}
 	}
+	// gradient := getGradient(color{255, 0, 0}, color{255, 242, 0})
+	// gradient := getDualGradient(color{0, 0, 175}, color{80, 160, 244}, color{12, 192, 75}, color{255, 255, 255})
 	gradient := getGradient(color{255, 0, 0}, color{255, 242, 0})
 	rescaleAndDraw(noise, min, max, gradient, pixels)
 }
