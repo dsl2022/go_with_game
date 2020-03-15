@@ -5,6 +5,9 @@ package main
 
 import (
 	"fmt"
+	"runtime"
+	"sync"
+	"time"
 
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -97,25 +100,64 @@ func fbm2(x, y, frequency, lacunarity, gain float32, octaves int) float32 {
 	return sum
 }
 
-func makeNoise(pixels []byte, frequency, lacunarity, gain float32, octaves int) {
+func makeNoise(pixels []byte, frequency, lacunarity, gain float32, octaves, w, h int) {
+	var mutex = &sync.Mutex{}
+	startTime := time.Now()
 	noise := make([]float32, winWidth*winHeight)
 	fmt.Println("frequency", frequency, "lacunarity", lacunarity, "gain", gain, "octaves", octaves)
-	i := 0
+	// i := 0
 	min := float32(9999.0)
 	max := float32(-9999.0)
-	for y := 0; y < winHeight; y++ {
-		for x := 0; x < winWidth; x++ {
-			// fmt.Println(snoise2(float32(x), float32(y)))
-			// noise[i] = snoise2(float32(x)/100.0, float32(y)/100.0)
-			noise[i] = turbulence(float32(x), float32(y), frequency, lacunarity, gain, octaves)
-			if noise[i] < min {
-				min = noise[i]
-			} else if noise[i] > max {
-				max = noise[i]
+
+	numRountines := runtime.NumCPU()
+	var wg sync.WaitGroup
+	wg.Add(numRountines)
+
+	batchSize := len(noise) / numRountines
+	for i := 0; i < numRountines; i++ {
+		// lambda function, just like function with no name
+		go func(i int) {
+			// wait group ran each loop
+			defer wg.Done()
+			start := i * batchSize
+			end := start + batchSize - 1
+			for j := start; j < end; j++ {
+				x := j % w
+				y := (j - x) / h
+				noise[j] = turbulence(float32(x), float32(y), frequency, lacunarity, gain, octaves)
+				// only one goroutine can come in each time now.
+
+				// if this always correct?
+				if noise[j] < min || noise[j] > max {
+					mutex.Lock()
+
+					if noise[j] < min {
+						min = noise[j]
+					} else if noise[j] > max {
+						max = noise[j]
+					}
+					mutex.Unlock()
+				}
 			}
-			i++
-		}
+		}(i)
 	}
+	wg.Wait()
+	elapsedTime := time.Since(startTime).Seconds() * 1000.0
+	fmt.Println("multiple thread time spent:", elapsedTime, " ms")
+	// for y := 0; y < winHeight; y++ {
+	// 	for x := 0; x < winWidth; x++ {
+	// 		// fmt.Println(snoise2(float32(x), float32(y)))
+	// 		// noise[i] = snoise2(float32(x)/100.0, float32(y)/100.0)
+	// 		noise[i] = turbulence(float32(x), float32(y), frequency, lacunarity, gain, octaves)
+	// 		if noise[i] < min {
+	// 			min = noise[i]
+	// 		} else if noise[i] > max {
+	// 			max = noise[i]
+	// 		}
+	// 		i++
+	// 	}
+	// }
+
 	// gradient := getGradient(color{255, 0, 0}, color{255, 242, 0})
 	// gradient := getDualGradient(color{0, 0, 175}, color{80, 160, 244}, color{12, 192, 75}, color{255, 255, 255})
 	gradient := getGradient(color{255, 0, 0}, color{255, 242, 0})
@@ -175,7 +217,7 @@ func main() {
 	lac := float32(3.0)
 	octaves := 3
 
-	makeNoise(pixels, frequency, lac, gain, octaves)
+	makeNoise(pixels, frequency, lac, gain, octaves, winWidth, winHeight)
 	keyState := sdl.GetKeyboardState()
 	for {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
@@ -190,19 +232,19 @@ func main() {
 		}
 		if keyState[sdl.SCANCODE_O] != 0 {
 			octaves = octaves + 1*mult
-			makeNoise(pixels, frequency, lac, gain, octaves)
+			makeNoise(pixels, frequency, lac, gain, octaves, winWidth, winHeight)
 		}
 		if keyState[sdl.SCANCODE_F] != 0 {
 			frequency = frequency + .001*float32(mult)
-			makeNoise(pixels, frequency, lac, gain, octaves)
+			makeNoise(pixels, frequency, lac, gain, octaves, winWidth, winHeight)
 		}
 		if keyState[sdl.SCANCODE_G] != 0 {
 			gain = gain + 0.1*float32(mult)
-			makeNoise(pixels, frequency, lac, gain, octaves)
+			makeNoise(pixels, frequency, lac, gain, octaves, winWidth, winHeight)
 		}
 		if keyState[sdl.SCANCODE_L] != 0 {
 			lac = lac + 0.1*float32(mult)
-			makeNoise(pixels, frequency, lac, gain, octaves)
+			makeNoise(pixels, frequency, lac, gain, octaves, winWidth, winHeight)
 		}
 
 		tex.Update(nil, pixels, winWidth*4)
