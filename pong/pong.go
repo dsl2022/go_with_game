@@ -15,7 +15,7 @@ package main
 import (
 	"fmt"
 	"math"
-	"time"
+
 
 	"github.com/JizongL/go_with_game/noise"
 	"github.com/veandco/go-sdl2/sdl"
@@ -176,6 +176,7 @@ func (ball *ball) update(leftPaddle *paddle, rightPaddle *paddle, elapsedTime fl
 	ball.x += ball.xv * elapsedTime
 	ball.y += ball.yv * elapsedTime
 	// handle collision
+
 	if ball.y-ball.radius < 0 || ball.y+ball.radius > float32(winHeight) {
 		ball.yv = -ball.yv
 	}
@@ -234,8 +235,8 @@ func (paddle *paddle) draw(pixels []byte) {
 	drawNumber(pos{numX, 35}, paddle.color, 10, paddle.score, pixels)
 }
 
-func (paddle *paddle) update(keyState []uint8, controllerAxis int16, elapsedTime float32) {
 
+func (paddle *paddle) update(keyState []uint8, controllerAxis int16, elapsedTime float32) {
 	if keyState[sdl.SCANCODE_UP] != 0 {
 		paddle.y -= paddle.speed * elapsedTime
 		fmt.Println(paddle.y)
@@ -323,6 +324,7 @@ func main() {
 	ball := ball{pos{300, 300}, 20, 200, 200, color{255, 255, 255}}
 
 	keyState := sdl.GetKeyboardState()
+
 	noise, min, max := noise.MakeNoise(noise.FBM, .001, 0.5, 2, 3, winWidth, winHeight)
 	gradient := getGradient(color{255, 0, 0}, color{0, 0, 0})
 	rescaleAndDraw(noise, min, max, gradient, pixels)
@@ -331,7 +333,6 @@ func main() {
 	var controllerAxis int16
 	for {
 		frameStart = time.Now()
-
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			// type switch
 			switch event.(type) {
